@@ -1,5 +1,7 @@
 package com.hui.spring.starter.file;
 
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
@@ -38,4 +40,17 @@ public interface DistributedFileStorage {
     URL genUrl(String bucket, String key);
 
     URL genUrl(String key);
+
+    URL genUrl(String bucket, String key, CannedAccessControlList controlList);
+
+    URL genUrl(String key, CannedAccessControlList controlList);
+
+    URL genPresignedUrl(String bucket, String key);
+
+    URL genPresignedUrl(String key);
+
+    URL genPresignedUrl(String bucket, String key, CannedAccessControlList controlList);
+
+    URL genPresignedUrl(String key, CannedAccessControlList controlList);
+
 }

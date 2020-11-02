@@ -1,10 +1,7 @@
 package com.hui.spring.starter.file.ceph;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -12,10 +9,11 @@ import com.amazonaws.util.IOUtils;
 import com.hui.spring.starter.file.BaseDistributedFileStorage;
 import com.hui.spring.starter.file.FileResource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 /**
@@ -102,7 +100,25 @@ public class CephStorage extends BaseDistributedFileStorage {
 
     @Override
     public URL genUrl(String bucket, String key) {
+        return client.getUrl(bucket, key);
+    }
+
+    @Override
+    public URL genUrl(String bucket, String key, CannedAccessControlList controlList) {
+        client.setObjectAcl(bucket, key, controlList);
+        return this.genUrl(bucket, key);
+    }
+
+    @Override
+    public URL genPresignedUrl(String bucket, String key) {
         GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, key);
         return client.generatePresignedUrl(request);
     }
+
+    @Override
+    public URL genPresignedUrl(String bucket, String key, CannedAccessControlList controlList) {
+        client.setObjectAcl(bucket, key, controlList);
+        return this.genPresignedUrl(bucket, key);
+    }
+
 }

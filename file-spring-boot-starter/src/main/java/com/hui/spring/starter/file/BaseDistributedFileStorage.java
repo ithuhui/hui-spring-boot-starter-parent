@@ -1,5 +1,7 @@
 package com.hui.spring.starter.file;
 
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+
 import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.InputStream;
@@ -49,6 +51,21 @@ public abstract class BaseDistributedFileStorage implements DistributedFileStora
     @Override
     public URL genUrl(String key) {
         return this.genUrl(getDefaultBucket(), key);
+    }
+
+    @Override
+    public URL genUrl(String key, CannedAccessControlList controlList) {
+        return this.genUrl(this.getDefaultBucket(),key,controlList);
+    }
+
+    @Override
+    public URL genPresignedUrl(String key) {
+        return this.genPresignedUrl(this.getDefaultBucket(), key);
+    }
+
+    @Override
+    public URL genPresignedUrl(String key, CannedAccessControlList controlList) {
+        return this.genPresignedUrl(key,controlList);
     }
 
     protected String getContentType(String filename) {
