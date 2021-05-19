@@ -4,12 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.hui.spring</groupId>
-    <artifactId>hui-spring-boot-starter-parent</artifactId>
+    <groupId>pers.hui.spring</groupId>
+    <artifactId>ken-spring-boot-starter-parent</artifactId>
     <packaging>pom</packaging>
     <version>0.0.1-SNAPSHOT</version>
     <modules>
         <module>file-spring-boot-starter</module>
+        <module>data-cache-spring-boot-starter</module>
+        <module>test-spring-boot</module>
     </modules>
 
     <parent>

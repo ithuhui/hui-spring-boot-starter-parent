@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.hui.spring.starter.file.config.FileServiceAutoConfiguration
+  pers.hui.spring.starter.file.config.FileServiceAutoConfiguration

@@ -1,0 +1,17 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: test-spring-boot
+  redis:
+    host: 172.18.5.191
+    database: 8
+    password: 123456
+    port: 6379
+ken:
+  cache:
+    cache-prefix: ken
+    caffeine:
+      expireAfterAccess: 5000
+    redis:
+      defaultExpiration: 60000
