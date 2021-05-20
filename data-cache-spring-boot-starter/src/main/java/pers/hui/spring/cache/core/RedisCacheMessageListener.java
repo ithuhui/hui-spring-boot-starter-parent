@@ -5,6 +5,8 @@ import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.util.Objects;
+
 /**
  * <code>RedisCacheMessageListener</code>
  * <desc>
@@ -16,9 +18,9 @@ import org.springframework.data.redis.core.RedisTemplate;
  */
 @Slf4j
 public class RedisCacheMessageListener implements MessageListener {
-    private RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<Object, Object> redisTemplate;
 
-    private KenCacheManager kenCacheManager;
+    private final KenCacheManager kenCacheManager;
 
     public RedisCacheMessageListener(RedisTemplate<Object, Object> redisTemplate,
                                      KenCacheManager kenCacheManager) {
@@ -30,8 +32,10 @@ public class RedisCacheMessageListener implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] bytes) {
         RedisCacheMessage cacheMessage = (RedisCacheMessage) redisTemplate.getValueSerializer().deserialize(message.getBody());
-        log.debug("recevice a redis topic message, clear local cache, the cacheName is {}, the key is {}",
-                cacheMessage.getCacheName(), cacheMessage.getKey());
-        kenCacheManager.clearLocal(cacheMessage.getCacheName(), cacheMessage.getKey());
+        if (Objects.nonNull(cacheMessage)){
+            log.debug("Receive a redis topic message, clear local cache, the cacheName is {}, the key is:[{}]",
+                    cacheMessage.getCacheName(), cacheMessage.getKey());
+            kenCacheManager.clearLocal(cacheMessage.getCacheName(), cacheMessage.getKey());
+        }
     }
 }

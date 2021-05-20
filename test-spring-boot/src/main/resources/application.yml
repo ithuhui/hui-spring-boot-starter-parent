@@ -12,6 +12,10 @@ ken:
   cache:
     cache-prefix: ken
     caffeine:
-      expireAfterAccess: 5000
+      expireAfterAccess: 500000
     redis:
-      defaultExpiration: 60000
+      defaultExpiration: 600000
+logging:
+  level:
+    root: info
+    pers.hui.spring: debug

@@ -13,8 +13,7 @@ import org.springframework.context.annotation.Configuration;
  * @author _Ken.Hu
  */
 @Configuration
+@EnableCaching
 public class CacheTestConfig {
-    public CacheTestConfig() {
-        System.out.println("enable cache .........");
-    }
+
 }

@@ -13,7 +13,6 @@ import org.springframework.cache.annotation.EnableCaching;
  *
  * @author Ken.Hu
  */
-@EnableCaching
 @SpringBootApplication(scanBasePackages = "pers.hui.spring")
 public class TestApp {
     public static void main(String[] args) {

@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.lang.NonNull;
 import pers.hui.spring.cache.config.CacheConfiguration;
 
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -25,15 +27,15 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class KenCacheManager implements CacheManager {
 
-    private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<String, Cache>();
+    private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
 
-    private CacheConfiguration cacheConfiguration;
+    private final CacheConfiguration cacheConfiguration;
 
-    private RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<Object, Object> redisTemplate;
 
     private boolean dynamic = true;
 
-    private Set<String> cacheNames;
+    private final Set<String> cacheNames;
 
     public KenCacheManager(CacheConfiguration cacheConfiguration,
                            RedisTemplate<Object, Object> redisTemplate) {
@@ -45,7 +47,7 @@ public class KenCacheManager implements CacheManager {
     }
 
     @Override
-    public Cache getCache(String name) {
+    public Cache getCache(@NonNull String name) {
         Cache cache = cacheMap.get(name);
         if (cache != null) {
             return cache;
@@ -56,7 +58,7 @@ public class KenCacheManager implements CacheManager {
 
         cache = new KenCache(name, redisTemplate, caffeineCache(), cacheConfiguration);
         Cache oldCache = cacheMap.putIfAbsent(name, cache);
-        log.debug("create cache instance, the cache name is : {}", name);
+        log.debug("Create cache instance, the cache name is : {}", name);
         return oldCache == null ? cache : oldCache;
     }
 
@@ -77,20 +79,23 @@ public class KenCacheManager implements CacheManager {
         if (cacheConfiguration.getCaffeine().getRefreshAfterWrite() > 0) {
             cacheBuilder.refreshAfterWrite(cacheConfiguration.getCaffeine().getRefreshAfterWrite(), TimeUnit.MILLISECONDS);
         }
+        cacheBuilder.removalListener((key, value, removalCause) ->
+                log.debug("Remove caffeine cache [key:{},value:{}]，reason:{}", key, value, removalCause)
+        );
         return cacheBuilder.build();
     }
 
     @Override
+    @NonNull
     public Collection<String> getCacheNames() {
         return this.cacheNames;
     }
 
     public void clearLocal(String cacheName, Object key) {
         Cache cache = cacheMap.get(cacheName);
-        if (cache == null) {
+        if (Objects.isNull(cache)) {
             return;
         }
-
         KenCache redisCaffeineCache = (KenCache) cache;
         redisCaffeineCache.clearLocal(key);
     }

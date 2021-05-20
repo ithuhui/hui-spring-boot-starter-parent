@@ -1,5 +1,6 @@
 package pers.hui.spring.cache.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -26,6 +27,7 @@ import java.util.Objects;
  *
  * @author Ken.Hu
  */
+@Slf4j
 @Configuration
 @ConditionalOnWebApplication
 @AutoConfigureAfter(RedisAutoConfiguration.class)
@@ -42,14 +44,14 @@ public class CacheAutoConfiguration {
     @ConditionalOnBean(RedisTemplate.class)
     @Primary
     public KenCacheManager kenCacheManager(RedisTemplate<Object, Object> redisTemplate) {
-        System.out.println("init kenCacheManager........");
+        log.debug("Init cache manager successful");
         return new KenCacheManager(cacheConfiguration, redisTemplate);
     }
 
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisTemplate<Object, Object> redisTemplate,
                                                                        KenCacheManager kenCacheManager) {
-        System.out.println("init listener........");
+        log.debug("Init redisMessageListener successful");
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
         redisMessageListenerContainer.setConnectionFactory(Objects.requireNonNull(redisTemplate.getConnectionFactory()));
         RedisCacheMessageListener cacheMessageListener = new RedisCacheMessageListener(redisTemplate, kenCacheManager);

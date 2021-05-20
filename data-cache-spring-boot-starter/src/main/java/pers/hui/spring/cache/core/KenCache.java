@@ -4,6 +4,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.lang.NonNull;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import pers.hui.spring.cache.config.CacheConfiguration;
 
@@ -57,36 +59,38 @@ public class KenCache extends AbstractValueAdaptingCache {
 
 
     @Override
-    protected Object lookup(Object key) {
+    protected Object lookup(@NonNull Object key) {
         String cacheKey = (String) getKey(key);
         Object value = caffeineCache.getIfPresent(cacheKey);
         if (Objects.nonNull(value)) {
-            log.debug("Get cache from caffeine, the key is : {}", cacheKey);
+            log.debug("Get cache from caffeine, the key [{}]", cacheKey);
             return value;
         }
 
         value = redisTemplate.opsForValue().get(cacheKey);
 
         if (Objects.nonNull(value)) {
-            log.debug("Get cache from redis and put in caffeine, the key is : {}", cacheKey);
+            log.debug("Get cache from redis and put in caffeine, the key is:[{}]", cacheKey);
             caffeineCache.put(cacheKey, value);
         }
         return value;
     }
 
     @Override
+    @NonNull
     public String getName() {
         return this.name;
     }
 
     @Override
+    @NonNull
     public Object getNativeCache() {
         return this;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T get(Object key, Callable<T> callable) {
+    public <T> T get(@NonNull Object key, @NonNull Callable<T> callable) {
         Object value = lookup(key);
         if (value != null) {
             return (T) value;
@@ -96,39 +100,42 @@ public class KenCache extends AbstractValueAdaptingCache {
     }
 
     @Override
-    public void put(Object key, Object value) {
-        if (!super.isAllowNullValues() && value == null) {
+    public void put(@NonNull Object key, Object value) {
+        if (!super.isAllowNullValues() && Objects.isNull(value)) {
             this.evict(key);
             return;
         }
-        long expire = getExpire();
-        if (expire > 0) {
-            redisTemplate.opsForValue().set(getKey(key), toStoreValue(value), expire, TimeUnit.MILLISECONDS);
-        } else {
-            redisTemplate.opsForValue().set(getKey(key), toStoreValue(value));
-        }
+        putExpireKey(key, value);
 
-        push(new RedisCacheMessage(this.name, key));
+        pushMsgToClearCache(new RedisCacheMessage(this.name, key));
 
         caffeineCache.put(key, value);
     }
 
     @Override
-    public void evict(Object o) {
+    public void evict(@NonNull Object key) {
+        // 先清除redis中缓存数据，然后清除caffeine中的缓存，避免短时间内如果先清除caffeine缓存后其他请求会再从redis里加载到caffeine中
+        redisTemplate.delete(getKey(key));
 
+        pushMsgToClearCache(new RedisCacheMessage(this.name, key));
+
+        caffeineCache.invalidate(key);
     }
 
     @Override
     public void clear() {
-// 先清除redis中缓存数据，然后清除caffeine中的缓存，避免短时间内如果先清除caffeine缓存后其他请求会再从redis里加载到caffeine中
+        // 先清除redis中缓存数据，然后清除caffeine中的缓存，避免短时间内如果先清除caffeine缓存后其他请求会再从redis里加载到caffeine中
         Set<Object> keys = redisTemplate.keys(this.name.concat(":"));
-        for (Object key : keys) {
-            redisTemplate.delete(key);
+        if (!CollectionUtils.isEmpty(keys)) {
+
+            keys.parallelStream().forEach(key ->
+                    redisTemplate.delete(key)
+            );
+
+            pushMsgToClearCache(new RedisCacheMessage(this.name, null));
+
+            caffeineCache.invalidateAll();
         }
-
-        push(new RedisCacheMessage(this.name, null));
-
-        caffeineCache.invalidateAll();
     }
 
     private Object getKey(Object key) {
@@ -137,12 +144,12 @@ public class KenCache extends AbstractValueAdaptingCache {
 
     /**
      * 缓存变更时通知其他节点清理本地缓存
-     *
      * @param message
      */
-    private void push(RedisCacheMessage message) {
+    private void pushMsgToClearCache(RedisCacheMessage message) {
         redisTemplate.convertAndSend(topic, message);
     }
+
 
     private long getExpire() {
         long expire = defaultExpiration;
@@ -151,23 +158,14 @@ public class KenCache extends AbstractValueAdaptingCache {
     }
 
     @Override
-    public ValueWrapper putIfAbsent(Object key, Object value) {
+    public ValueWrapper putIfAbsent(@NonNull Object key, Object value) {
         Object cacheKey = getKey(key);
-        Object prevValue = null;
+        Object prevValue;
         // 考虑使用分布式锁，或者将redis的setIfAbsent改为原子性操作
-        synchronized (key) {
+        synchronized (this) {
             prevValue = redisTemplate.opsForValue().get(cacheKey);
-            if(prevValue == null) {
-                long expire = getExpire();
-                if(expire > 0) {
-                    redisTemplate.opsForValue().set(getKey(key), toStoreValue(value), expire, TimeUnit.MILLISECONDS);
-                } else {
-                    redisTemplate.opsForValue().set(getKey(key), toStoreValue(value));
-                }
-
-                push(new RedisCacheMessage(this.name, key));
-
-                caffeineCache.put(key, toStoreValue(value));
+            if (Objects.isNull(prevValue)) {
+                putExpireKey(key, value);
             }
         }
         return toValueWrapper(prevValue);
@@ -179,9 +177,22 @@ public class KenCache extends AbstractValueAdaptingCache {
      * @param key
      */
     public void clearLocal(Object key) {
-        log.debug("Clear local cache, the key is : {}", key);
+        log.debug("Clear local cache, the key is:[{}]", key);
         if (Objects.nonNull(key)) {
             caffeineCache.invalidate(key);
         }
+    }
+
+    private void putExpireKey(Object key, Object value) {
+        long expire = getExpire();
+        if (expire > 0) {
+            redisTemplate.opsForValue().set(getKey(key), toStoreValue(value), expire, TimeUnit.MILLISECONDS);
+        } else {
+            redisTemplate.opsForValue().set(getKey(key), toStoreValue(value));
+        }
+
+        pushMsgToClearCache(new RedisCacheMessage(this.name, key));
+
+        caffeineCache.put(key, toStoreValue(value));
     }
 }
