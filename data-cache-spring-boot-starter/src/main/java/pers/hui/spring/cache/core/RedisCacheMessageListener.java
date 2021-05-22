@@ -31,11 +31,13 @@ public class RedisCacheMessageListener implements MessageListener {
 
     @Override
     public void onMessage(Message message, byte[] bytes) {
-        RedisCacheMessage cacheMessage = (RedisCacheMessage) redisTemplate.getValueSerializer().deserialize(message.getBody());
-        if (Objects.nonNull(cacheMessage)){
+        Object value = redisTemplate.getValueSerializer().deserialize(message.getBody());
+        if (value instanceof RedisCacheMessage) {
+            RedisCacheMessage cacheMessage = (RedisCacheMessage) value;
             log.debug("Receive a redis topic message, clear local cache, the cacheName is {}, the key is:[{}]",
                     cacheMessage.getCacheName(), cacheMessage.getKey());
             kenCacheManager.clearLocal(cacheMessage.getCacheName(), cacheMessage.getKey());
         }
+
     }
 }

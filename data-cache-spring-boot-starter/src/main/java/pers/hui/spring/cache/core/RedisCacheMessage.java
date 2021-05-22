@@ -1,6 +1,8 @@
 package pers.hui.spring.cache.core;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
@@ -14,11 +16,12 @@ import java.io.Serializable;
  * @author _Ken.Hu
  */
 @Data
+@NoArgsConstructor
 public class RedisCacheMessage implements Serializable {
 
-    private final String cacheName;
+    private String cacheName;
 
-    private final Object key;
+    private Object key;
 
     public RedisCacheMessage(String cacheName, Object key) {
         super();

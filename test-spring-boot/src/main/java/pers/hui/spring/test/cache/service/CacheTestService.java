@@ -1,6 +1,8 @@
 package pers.hui.spring.test.cache.service;
 
-import org.springframework.cache.annotation.CacheConfig;
+import pers.hui.spring.test.cache.dto.CacheDTO;
+
+import java.util.List;
 
 /**
  * <code>CacheTest</code>
@@ -14,4 +16,8 @@ import org.springframework.cache.annotation.CacheConfig;
 public interface CacheTestService {
 
     String stringTest(String key);
+
+    List<CacheDTO> cachePost(CacheDTO cacheDTO);
+
+    void clear();
 }

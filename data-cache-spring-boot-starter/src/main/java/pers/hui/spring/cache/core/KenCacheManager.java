@@ -96,7 +96,7 @@ public class KenCacheManager implements CacheManager {
         if (Objects.isNull(cache)) {
             return;
         }
-        KenCache redisCaffeineCache = (KenCache) cache;
-        redisCaffeineCache.clearLocal(key);
+        KenCache kenCache = (KenCache) cache;
+        kenCache.clearLocal(key);
     }
 }

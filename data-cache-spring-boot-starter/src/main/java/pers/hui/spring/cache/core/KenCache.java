@@ -9,11 +9,13 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import pers.hui.spring.cache.config.CacheConfiguration;
 
+import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * <code>KenCache</code>
@@ -90,13 +92,31 @@ public class KenCache extends AbstractValueAdaptingCache {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T get(@NonNull Object key, @NonNull Callable<T> callable) {
+    public <T> T get(@NonNull Object key, @NonNull Callable<T> valueLoader) {
         Object value = lookup(key);
         if (value != null) {
             return (T) value;
         }
-
-        return null;
+        ReentrantLock lock = new ReentrantLock();
+        lock.lock();
+        try {
+            value = lookup(key);
+            if (value != null) {
+                return (T) value;
+            }
+            value = valueLoader.call();
+            Object storeValue = toStoreValue(valueLoader.call());
+            put(key, storeValue);
+            return (T) value;
+        } catch (Exception e) {
+            try {
+                throw new ValueRetrievalException(key, valueLoader, e.getCause());
+            } catch (Exception e1) {
+                throw new IllegalStateException(e1);
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -122,9 +142,11 @@ public class KenCache extends AbstractValueAdaptingCache {
         caffeineCache.invalidate(key);
     }
 
+    /**
+     * 先清除redis中缓存数据，然后清除caffeine中的缓存，避免短时间内如果先清除caffeine缓存后其他请求会再从redis里加载到caffeine中
+     */
     @Override
     public void clear() {
-        // 先清除redis中缓存数据，然后清除caffeine中的缓存，避免短时间内如果先清除caffeine缓存后其他请求会再从redis里加载到caffeine中
         Set<Object> keys = redisTemplate.keys(this.name.concat(":"));
         if (!CollectionUtils.isEmpty(keys)) {
 
@@ -144,7 +166,8 @@ public class KenCache extends AbstractValueAdaptingCache {
 
     /**
      * 缓存变更时通知其他节点清理本地缓存
-     * @param message
+     *
+     * @param message 推送的消息
      */
     private void pushMsgToClearCache(RedisCacheMessage message) {
         redisTemplate.convertAndSend(topic, message);

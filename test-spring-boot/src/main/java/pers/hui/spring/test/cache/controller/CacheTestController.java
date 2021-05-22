@@ -1,9 +1,12 @@
 package pers.hui.spring.test.cache.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
 import pers.hui.spring.test.cache.service.CacheTestService;
+import pers.hui.spring.test.cache.dto.CacheDTO;
+
+import java.util.List;
 
 /**
  * <code>CacheTestController</code>
@@ -24,9 +27,18 @@ public class CacheTestController {
         this.cacheTestService = cacheTestService;
     }
 
-    @GetMapping("cacheTest")
-    public String test(String id){
+    @GetMapping(value = "cacheTest", produces = MediaType.APPLICATION_JSON_VALUE)
+    public String test(@RequestParam String id) {
         return cacheTestService.stringTest(id);
     }
 
+    @PostMapping(value = "cachePostTest", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<CacheDTO> cachePost(@RequestBody CacheDTO cacheDTO) {
+        return cacheTestService.cachePost(cacheDTO);
+    }
+
+    @GetMapping(value = "cacheEvict", produces = MediaType.APPLICATION_JSON_VALUE)
+    public void testEvict() {
+        cacheTestService.clear();
+    }
 }
